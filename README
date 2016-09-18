@@ -1,0 +1,4 @@
+PostgreSQL C library async threading wrapper
+============================================
+
+This library wraps libpq API for the use with the mrkthr threads.
