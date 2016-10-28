@@ -27,7 +27,7 @@ endif
 
 libmrkpq_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(PG_INCLUDEDIR)
 
-libmrkpq_la_LDFLAGS = -version-info 0:0:0
+#libmrkpq_la_LDFLAGS = -version-info 0:0:0
 libmrkpq_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkthr -lmrkcommon -L${PG_LIBDIR} -lpq
 #libmrkpq_la_LDFLAGS = -all-static
 #libmrkpq_la_LDFLAGS = -all-static -Wl,-Bdynamic,-L$(libdir),-lfoo -lqwe,-Bstatic
