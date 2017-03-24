@@ -13,6 +13,11 @@
 static PGconn *
 mrkpq_postconnect(PGconn *conn)
 {
+    if (PQstatus(conn) == CONNECTION_BAD) {
+        CTRACE("PQ error: %s", PQerrorMessage(conn));
+        goto err;
+    }
+
     if (PQsetnonblocking(conn, 1) != 0) {
         CTRACE("PQ error: %s", PQerrorMessage(conn));
         goto err;
@@ -25,6 +30,7 @@ mrkpq_postconnect(PGconn *conn)
 
         fd = PQsocket(conn);
         pst = PQconnectPoll(conn);
+
         switch (pst) {
         case PGRES_POLLING_READING:
             if ((res = mrkthr_wait_for_read(fd)) != 0) {
@@ -42,8 +48,15 @@ mrkpq_postconnect(PGconn *conn)
             }
             break;
 
-        default:
+        case PGRES_POLLING_FAILED:
+            CTRACE("PQconnectPoll error: %s", PQerrorMessage(conn));
+            goto err;
+
+        case PGRES_POLLING_OK:
             break;
+
+        default:
+            goto err;
         }
 
         if (!(pst == PGRES_POLLING_READING || pst == PGRES_POLLING_WRITING)) {
