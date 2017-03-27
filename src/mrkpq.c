@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
+//#define TRRET_DEBUG
 #include <mrkcommon/dumpm.h>
 #include <mrkcommon/util.h>
 #include <mrkthr.h>
@@ -13,19 +14,23 @@
 static PGconn *
 mrkpq_postconnect(PGconn *conn)
 {
+    int res;
+    res = 0;
+
     if (PQstatus(conn) == CONNECTION_BAD) {
         CTRACE("PQ error: %s", PQerrorMessage(conn));
+        res = MRKPQ_POSTCONNECT + 1;
         goto err;
     }
 
     if (PQsetnonblocking(conn, 1) != 0) {
         CTRACE("PQ error: %s", PQerrorMessage(conn));
+        res = MRKPQ_POSTCONNECT + 2;
         goto err;
     }
 
     while (true) {
         int fd;
-        int res;
         PostgresPollingStatusType pst;
 
         fd = PQsocket(conn);
@@ -35,7 +40,7 @@ mrkpq_postconnect(PGconn *conn)
         case PGRES_POLLING_READING:
             if ((res = mrkthr_wait_for_read(fd)) != 0) {
                 CTRACE("res=%d", res);
-                res = MRKPQ_POSTCONNECT + 1;
+                res = MRKPQ_POSTCONNECT + 3;
                 goto err;
             }
             break;
@@ -43,19 +48,21 @@ mrkpq_postconnect(PGconn *conn)
         case PGRES_POLLING_WRITING:
             if ((res = mrkthr_wait_for_write(fd)) != 0) {
                 CTRACE("res=%d", res);
-                res = MRKPQ_POSTCONNECT + 2;
+                res = MRKPQ_POSTCONNECT + 4;
                 goto err;
             }
             break;
 
         case PGRES_POLLING_FAILED:
             CTRACE("PQconnectPoll error: %s", PQerrorMessage(conn));
+            res = MRKPQ_POSTCONNECT + 5;
             goto err;
 
         case PGRES_POLLING_OK:
             break;
 
         default:
+            res = MRKPQ_POSTCONNECT + 6;
             goto err;
         }
 
@@ -68,6 +75,7 @@ end:
     return conn;
 
 err:
+    TR(res);
     PQfinish(conn);
     conn = NULL;
     goto end;
@@ -231,6 +239,7 @@ mrkpq_postquery(PGconn *conn,
 
         if (rcb(conn, qres, udata) != 0) {
             res = MRKPQ_POSTQUERY + 5;
+            PQclear(qres);
             goto err;
         }
 
