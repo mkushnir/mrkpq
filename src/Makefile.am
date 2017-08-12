@@ -6,8 +6,9 @@
 #   - nodist_HEADERS
 #   - noinst_HEADERS
 
+diags = diag.txt
 BUILT_SOURCES = diag.c diag.h
-EXTRA_DIST = diag.txt gen-diag
+EXTRA_DIST = $(diags)
 CLEANFILES = $(BUILT_SOURCES) *.core core
 #CLEANFILES += *.in
 AM_MAKEFLAGS = -s
@@ -28,14 +29,14 @@ endif
 libmrkpq_la_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/src -I$(top_srcdir) -I$(PG_INCLUDEDIR)
 
 #libmrkpq_la_LDFLAGS = -version-info 0:0:0
-libmrkpq_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkthr -lmrkcommon -L${PG_LIBDIR} -lpq
+libmrkpq_la_LDFLAGS = -version-info 0:0:0 -L$(libdir) -lmrkthr -lmrkcommon -lmndiag -L${PG_LIBDIR} -lpq
 #libmrkpq_la_LDFLAGS = -all-static
 #libmrkpq_la_LDFLAGS = -all-static -Wl,-Bdynamic,-L$(libdir),-lfoo -lqwe,-Bstatic
 
 SUBDIRS = .
 
-diag.c diag.h: diag.txt gen-diag
-	$(AM_V_GEN) cat diag.txt | sort -u | /bin/sh ./gen-diag mrkpq
+diag.c diag.h: $(diags)
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrkpq -H diag.h -C diag.c *.[ch]
 
 run: all
 	for i in $(bin_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;

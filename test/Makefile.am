@@ -13,8 +13,9 @@ noinst_HEADERS = unittest.h
 
 noinst_PROGRAMS=testfoo
 
-BUILT_SOURCES = diag.c diag.h gen-diag
-EXTRA_DIST = diag.txt gen-diag runscripts
+diags = ../src/diag.txt diag.txt
+BUILT_SOURCES = diag.c diag.h
+EXTRA_DIST = diag.txt runscripts
 
 #noinst_HEADERS = ../src/mrkpq.h
 
@@ -27,11 +28,11 @@ endif
 nodist_testfoo_SOURCES = diag.c
 testfoo_SOURCES = testfoo.c
 testfoo_CFLAGS = $(DEBUG_FLAGS) -Wall -Wextra -Werror -std=c99 @_GNU_SOURCE_MACRO@ -I$(top_srcdir)/test -I$(top_srcdir)/src -I$(top_srcdir) -I${PG_INCLUDEDIR}
-testfoo_LDFLAGS = -L$(libdir) -lmrkthr -lmrkcommon -L$(top_srcdir)/src/.libs -L${PG_LIBDIR} -lmrkpq
-#testfoo_LDFLAGS = -L$(top_srcdir)/src/.libs -lmrkpq
+testfoo_LDFLAGS = -L$(libdir) -lmrkthr -lmrkcommon -L$(top_srcdir)/src/.libs -L${PG_LIBDIR} -lmrkpq -lmndiag
+#testfoo_LDFLAGS = -L$(top_srcdir)/src/.libs -lmrkpq -lmndiag
 
-diag.c diag.h: diag.txt gen-diag
-	$(AM_V_GEN) cat diag.txt | sort -u | /bin/sh ./gen-diag mrkpq
+diag.c diag.h: $(diags)
+	$(AM_V_GEN) cat $(diags) | sort -u >diag.txt.tmp && mndiagen -S diag.txt.tmp -L mrkpq -H diag.h -C diag.c ../*.[ch] ./*.[ch]
 
 testrun: all
 	for i in $(noinst_PROGRAMS); do if test -x ./$$i; then LD_LIBRARY_PATH=$(libdir) ./$$i; fi; done;
