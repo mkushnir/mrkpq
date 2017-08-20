@@ -14,7 +14,7 @@ then
     libtoolize
     make distclean
     autoreconf
-    ./configure --prefix=$home --enable-debug
+    ./configure --prefix=$HOME --enable-debug
 
 elif test "$1" = "dev"
 then
