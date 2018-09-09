@@ -92,7 +92,7 @@ test_pgconn0(void)
     PostgresPollingStatusType pst;
 
     if ((conn = PQconnectStart(
-                    "postgresql://pgsql@localhost/postgres")) == NULL) {
+                    "postgresql://postgres@localhost/postgres")) == NULL) {
         FAIL("PQconnectStart");
     }
     if (PQsetnonblocking(conn, 1) != 0) {
@@ -258,7 +258,7 @@ test_pgconn1(void)
     } params;
 
     if ((conn = mrkpq_connect_str(
-                    "postgresql://pgsql@localhost/postgres")) == NULL) {
+                    "postgresql://postgres@localhost/postgres")) == NULL) {
         FAIL("mrkpq_connect_str");
     }
 
@@ -295,7 +295,7 @@ mycb2(UNUSED PGconn *conn,
     popt.caption = NULL;
     popt.fieldName = NULL;
 
-    //PQprint(stdout, qres, &popt);
+    PQprint(stdout, qres, &popt);
     return 0;
 }
 
@@ -305,15 +305,16 @@ test_pgconn2(void)
 {
     PGconn *conn;
     const char * const params[] = {
-        "%_foreign_%",
+        //"%_foreign_%",
+        "pg_%",
     };
 
     if ((conn = mrkpq_connect_str(
-                    "postgresql://pgsql@localhost/postgres")) == NULL) {
+                    "postgresql://postgres@localhost/postgres")) == NULL) {
         FAIL("mrkpq_connect_str");
     }
 
-    mrkthr_sleep(1000);
+    //mrkthr_sleep(1000);
 
     if (mrkpq_prepare(conn,
                       "qweqwe",
@@ -324,10 +325,8 @@ test_pgconn2(void)
                       mycb2,
                       NULL,
                       NULL) != 0) {
-        FAIL("mrkpq_query");
+        FAIL("mrkpq_prepare");
     }
-
-    mrkthr_sleep(1000);
 
     if (mrkpq_query_prepared(conn,
                              "qweqwe",
@@ -340,20 +339,115 @@ test_pgconn2(void)
                              mycb2,
                              NULL,
                              NULL) != 0) {
-        FAIL("mrkpq_query");
+        FAIL("mrkpq_query_prepared");
     }
-
 
     PQfinish(conn);
 }
 
 
-UNUSED static int
+static int
+_test_pgconn3(UNUSED int argc, void **argv)
+{
+    mrkthr_sema_t *sema;
+    PGconn *conn;
+    intptr_t i;
+    long n;
+    char buf[32];
+    const char * const params[] = {
+        buf,
+    };
+
+    assert(argc == 3);
+
+    sema = argv[0];
+    conn = argv[1];
+    i = (intptr_t)argv[2];
+    n = random() % 1000;
+    snprintf(buf, sizeof(buf), "%ld", n);
+    CTRACE("i=%ld n=%ld", i, n);
+    if (mrkthr_sema_acquire(sema) != 0) {
+        goto err;
+    }
+    if (mrkpq_query_prepared(conn,
+                             "asdasd",
+                             countof(params),
+                             params,
+                             NULL,
+                             NULL,
+                             0,
+                             0,
+                             mycb2,
+                             NULL,
+                             NULL) != 0) {
+        FAIL("mrkpq_query_prepared");
+    }
+    mrkthr_sema_release(sema);
+
+    return 0;
+
+err:
+    return 1;
+}
+
+
+#define TEST_PGCONN3_N 10
+UNUSED static void
+test_pgconn3(void)
+{
+    int res;
+    PGconn *conn;
+    mrkthr_ctx_t *coros[TEST_PGCONN3_N];
+    mrkthr_sema_t sema;
+    struct {
+        long rnd;
+        int in;
+        int expected;
+    } data[] = {
+        {0, 0, 0},
+    };
+    UNITTEST_PROLOG_RAND;
+
+    mrkthr_sleep(200);
+    if ((conn = mrkpq_connect_str(
+                    "postgresql://postgres@localhost/postgres")) == NULL) {
+        FAIL("mrkpq_connect_str");
+    }
+
+    if (mrkpq_prepare(conn,
+                      "asdasd",
+                      "select pg_sleep(0.0), $1::int;",
+                      0,
+                      NULL,
+                      0,
+                      mycb2,
+                      NULL,
+                      NULL) != 0) {
+        FAIL("mrkpq_prepare");
+    }
+
+    mrkthr_sema_init(&sema, 1);
+    for (i = 0; i < TEST_PGCONN3_N; ++i) {
+        coros[i] = MRKTHR_SPAWN(NULL, _test_pgconn3, &sema, conn, (void *)(intptr_t)i);
+    }
+
+    for (i = 0; i < TEST_PGCONN3_N; ++i) {
+        res = mrkthr_join(coros[i]);
+        TR(res);
+    }
+    mrkthr_sema_fini(&sema);
+
+    PQfinish(conn);
+}
+
+
+static int
 run0(UNUSED int argc, UNUSED void **argv)
 {
     CTRACE("argc=%d", argc);
     //mrkthr_sleep(2000);
     test_pgconn2();
+    test_pgconn3();
     return 0;
 }
 

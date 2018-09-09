@@ -191,7 +191,6 @@ mrkpq_postquery(PGconn *conn,
 
         events = 0;
         if (mrkthr_wait_for_events(fd, &events) != 0) {
-            CTRACE("res=%d", res);
             res = MRKPQ_POSTQUERY + 1;
             goto err;
         }
