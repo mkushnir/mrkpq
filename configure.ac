@@ -36,6 +36,11 @@ fi
 
 AC_SUBST(CC_DEBUG, ['-ftrapv'])
 
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR([.ac-aux])
+AC_CONFIG_FILES([Makefile src/Makefile test/Makefile man/Makefile])
+AC_CONFIG_HEADERS(config.h)
+
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 case "$target_os" in
@@ -47,14 +52,12 @@ case "$target_os" in
     ;;
 esac
 
-AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG(C)
 
 AC_PROG_CC
 AC_PROG_CXX
 AM_PROG_AR
-AC_PROG_RANLIB
 AC_PROG_INSTALL
 
 LT_INIT
@@ -62,10 +65,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
 dnl AM_MAINTAINER_MODE
-
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile man/Makefile])
-
-AC_CONFIG_HEADERS(config.h)
 
 AC_FUNC_MALLOC
 AC_FUNC_REALLOC
